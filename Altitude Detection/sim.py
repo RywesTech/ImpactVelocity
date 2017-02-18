@@ -52,7 +52,7 @@ acc_a_digit = np.digitize(acc_a_noisy, np.arange(0, acc_a_noisy.max(), ACC_STEP)
 alt_frames = int(TOTAL_TIME / ALT_DT)
 alt_t = np.linspace(0, TOTAL_TIME, alt_frames)
 alt_x_hold = np.interp(alt_t, t, x)
-alt_x_noisy = acc_x_hold + np.random.normal(0, ACC_STDEV, alt_frames)
+alt_x_noisy = acc_x_hold + np.random.normal(-1, ACC_STDEV, alt_frames)
 alt_x_digit = np.digitize(alt_x_noisy, np.arange(0, alt_x_noisy.max(), ALT_STEP))
 
 plt.plot(acc_t, acc_a_digit)
