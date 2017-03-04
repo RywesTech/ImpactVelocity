@@ -45,7 +45,7 @@ void setup() {
     error = true;
   }
 
-  if ( !bme.begin()) {
+  if (!bme.begin()) {
     error = true;
   }
 
