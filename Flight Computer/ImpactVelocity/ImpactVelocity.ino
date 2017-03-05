@@ -1,28 +1,27 @@
 // Includes:
-#include <Wire.h>
+#include <SD.h>
 #include <SPI.h>
-#include <Servo.h>
+#include <Wire.h>
 #include <SparkFunLSM9DS1.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 
 // Objects:
-Servo parachuteMotor;
-Servo airBrakes;
 LSM9DS1 imu;
 Adafruit_BMP280 bme;
 
+bool error; // keep track if we have an error
+
 // Variables:
-float lastAccelRead = 0;
-float altMeters = 0;
-float altGoal = 236.22;
+float bmeTemp, bmePressure, bmeAlt;
+float imuGX, imuGY, imuGZ;
+float imuAX, imuAY, imuAZ;
+float imuMX, imuMY, imuMZ;
 float altStart = 0;
 
 // Indexes and statics:
 int statusGreenPin = 2;
 int statusRedPin = 3;
-int parachuteMotorPin = 9;
-int airBrakesPin = 10;
 
 #define LSM9DS1_M   0x1E // 0x1C if SDO_M is LOW
 #define LSM9DS1_AG  0x6B // 0x6A if SDO_AG is LOW
@@ -30,12 +29,8 @@ int airBrakesPin = 10;
 #define MSL_PRESSURE 1032.84 // Pressure at sea level (change this)
 
 void setup() {
-  bool error; // keep track if there's any errors
 
   Serial.begin(9600);
-
-  parachuteMotor.attach(parachuteMotorPin);
-  airBrakes.attach(airBrakesPin);
 
   imu.settings.device.commInterface = IMU_MODE_I2C;
   imu.settings.device.mAddress = LSM9DS1_M;
@@ -49,38 +44,64 @@ void setup() {
     error = true;
   }
 
-  altStart = bme.readAltitude(MSL_PRESSURE);
-
-  if (error) {
-    statusError();
-  } else {
-    statusSuccess();
-  }
 }
 
 void loop() {
-  // Make sure all the shit here is non blocking
 
+  String logString;
+  error = false;
+  
   if (imu.accelAvailable()) {
     imu.readAccel();
+  }else{
+    error = true;
   }
+  
+  bmeTemp = bme.readTemperature();
+  bmePressure = bme.readPressure();
+  bmeAlt      = bme.readAltitude(MSL_PRESSURE);
 
-  altMeters = bme.readAltitude(MSL_PRESSURE);
+  imuGX = imu.calcGyro(imu.gx);
+  imuGY = imu.calcGyro(imu.gy);
+  imuGZ = imu.calcGyro(imu.gz);
+  
+  imuAX = imu.calcAccel(imu.ax);
+  imuAY = imu.calcAccel(imu.ay);
+  imuAZ = imu.calcAccel(imu.az);
 
-  if(altMeters > altGoal){
-    //deploy brakes
+  imuMX = imu.calcMag(imu.mx);
+  imuMY = imu.calcMag(imu.my);
+  imuMZ = imu.calcMag(imu.mz);
+
+  Serial.println(bmeTemp);
+  Serial.println(imuAZ);
+
+  logData(logString);
+
+  if (error) {
+    statusBoi();
+  } else {
+    statusSpicy();
   }
-
-  Serial.println(altMeters - altStart);
 }
 
-void statusError() {
+void logData(String dataString){ // Log our data to SD card
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  if (dataFile) {
+    dataFile.println(dataString);
+    dataFile.close();
+  } else {
+    Serial.println("error opening datalog.txt");
+    error = true;
+  }
+}
+
+void statusBoi() { // Not good
   digitalWrite(statusRedPin, HIGH);
   digitalWrite(statusGreenPin, LOW);
 }
 
-void statusSuccess() {
+void statusSpicy() { // We ready to roll
   digitalWrite(statusRedPin, LOW);
   digitalWrite(statusGreenPin, HIGH);
 }
-
